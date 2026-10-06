@@ -35,6 +35,8 @@ class MyAppState extends State<MyApp> {
   double pitch = 1.0;
   double rate = !kIsWeb ? 0.5 : 0.9;
   bool isCurrentLanguageInstalled = false;
+  bool useSystemSpeechRate = false;
+  bool waitForScreenReader = false;
 
   String? _newVoiceText;
   int? _inputLength;
@@ -390,6 +392,7 @@ class MyAppState extends State<MyApp> {
               _voiceSection(), // _getVoices
               _languageSection(), // _getLanguages
               _buildSliders(),
+              if (isAndroid || isIOS) _screenReaderSection(),
               if (isAndroid) _getMaxSpeechInputLengthSection(),
             ],
           ),
@@ -606,6 +609,29 @@ class MyAppState extends State<MyApp> {
           },
         ),
         Text("$_inputLength characters"),
+      ],
+    );
+  }
+
+  Widget _screenReaderSection() {
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text('Use the phone\'s speech rate'),
+          value: useSystemSpeechRate,
+          onChanged: (value) async {
+            await flutterTts.setUseSystemSpeechRate(value);
+            setState(() => useSystemSpeechRate = value);
+          },
+        ),
+        SwitchListTile(
+          title: const Text('Wait for the screen reader'),
+          value: waitForScreenReader,
+          onChanged: (value) async {
+            await flutterTts.setWaitForScreenReader(value);
+            setState(() => waitForScreenReader = value);
+          },
+        ),
       ],
     );
   }

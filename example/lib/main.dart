@@ -90,6 +90,12 @@ class _SpeakScreenState extends State<SpeakScreen> {
   }
 
   Future<void> _configure() async {
+    // Same audio session as the Ezymob app: "playback" isn't muted by the silent mode.
+    await _tts.setSharedInstance(true);
+    await _tts.setIosAudioCategory(
+      IosTextToSpeechAudioCategory.playback,
+      [IosTextToSpeechAudioCategoryOptions.duckOthers],
+    );
     await _tts.awaitSpeakCompletion(true);
     await _tts.setLanguage('fr-FR');
     await _tts.setSpeechRate(0.5);

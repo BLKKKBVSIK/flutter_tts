@@ -1,7 +1,7 @@
 name: flutter_tts
 description: A flutter plugin for Text to Speech.  This plugin is supported on iOS, macOS, Android, Web, & Windows.
-version: 4.2.5
-homepage: https://github.com/dlutton/flutter_tts
+version: 4.2.5+ezymob.1
+homepage: https://github.com/BLKKKBVSIK/flutter_tts
 
 dependencies:
   flutter:
@@ -16,7 +16,7 @@ flutter:
         package: com.eyedeadevelopment.fluttertts
         pluginClass: FlutterTtsPlugin
       ios:
-        pluginClass: FlutterTtsPlugin
+        pluginClass: SwiftFlutterTtsPlugin
       macos:
         pluginClass: FlutterTtsPlugin
       windows:

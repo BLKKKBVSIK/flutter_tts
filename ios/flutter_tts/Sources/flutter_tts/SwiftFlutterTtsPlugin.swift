@@ -17,6 +17,12 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
   var autoStopSharedSession: Bool = true
   var speakResult: FlutterResult? = nil
   var synthResult: FlutterResult? = nil
+  var useSystemSpeechRate: Bool = false
+  var waitForScreenReader: Bool = false
+  // Phrase handed to VoiceOver, until VoiceOver says it has finished reading it.
+  var pendingAnnouncement: String? = nil
+  var announcementResult: FlutterResult? = nil
+  var announcementRetried: Bool = false
   
   lazy var audioSession = AVAudioSession.sharedInstance()
   lazy var language: String = {
@@ -32,6 +38,11 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
     super.init()
     self.channel = channel
     synthesizer.delegate = self
+    NotificationCenter.default.addObserver(
+      forName: UIAccessibility.announcementDidFinishNotification, object: nil, queue: .main
+    ) { [weak self] notification in
+      self?.announcementDidFinish(notification)
+    }
   }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -48,6 +59,14 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       break
     case "awaitSpeakCompletion":
       self.awaitSpeakCompletion = call.arguments as! Bool
+      result(1)
+      break
+    case "setUseSystemSpeechRate":
+      self.useSystemSpeechRate = call.arguments as! Bool
+      result(1)
+      break
+    case "setWaitForScreenReader":
+      self.waitForScreenReader = call.arguments as! Bool
       result(1)
       break
     case "awaitSynthCompletion":
@@ -85,6 +104,7 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       self.setPitch(pitch: Float(pitch), result: result)
       break
     case "stop":
+      self.cancelAnnouncement()
       self.stop()
       result(1)
       break
@@ -147,6 +167,9 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       } else {
         result(0)
       }
+    } else if self.waitForScreenReader && UIAccessibility.isVoiceOverRunning
+                && UIApplication.shared.applicationState == .active {
+      self.announce(text: text, result: result)
     } else {
       let utterance = AVSpeechUtterance(string: text)
       if self.voice != nil {
@@ -154,7 +177,16 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       } else {
         utterance.voice = AVSpeechSynthesisVoice(language: self.language)
       }
-      utterance.rate = self.rate
+      if self.useSystemSpeechRate {
+        // iOS doesn't expose the Spoken Content rate: use the default rate,
+        // or VoiceOver's voice and rate when VoiceOver is running.
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        if #available(iOS 14.0, *) {
+          utterance.prefersAssistiveTechnologySettings = true
+        }
+      } else {
+        utterance.rate = self.rate
+      }
       utterance.volume = self.volume
       utterance.pitchMultiplier = self.pitch
 
@@ -165,6 +197,57 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
         result(1)
       }
     }
+  }
+
+  // iOS doesn't tell apps when VoiceOver is talking, so the phrase is handed to VoiceOver
+  // as a queued announcement: VoiceOver reads it after its current phrase, with its own
+  // voice and rate. Announcements are only read while the app is in the foreground.
+  private func announce(text: String, result: @escaping FlutterResult) {
+    self.cancelAnnouncement()
+    self.pendingAnnouncement = text
+    self.announcementRetried = false
+    if self.awaitSpeakCompletion {
+      self.announcementResult = result
+    } else {
+      result(1)
+    }
+    self.channel.invokeMethod("speak.onStart", arguments: nil)
+    self.postAnnouncement(text: text)
+  }
+
+  private func postAnnouncement(text: String) {
+    let attributes: [NSAttributedString.Key: Any] = [
+      .accessibilitySpeechQueueAnnouncement: true,
+      .accessibilitySpeechLanguage: self.voice?.language ?? self.language,
+    ]
+    UIAccessibility.post(notification: .announcement, argument: NSAttributedString(string: text, attributes: attributes))
+  }
+
+  private func announcementDidFinish(_ notification: Notification) {
+    guard let text = self.pendingAnnouncement,
+          notification.userInfo?[UIAccessibility.announcementStringValueUserInfoKey] as? String == text else {
+      return
+    }
+    let success = notification.userInfo?[UIAccessibility.announcementWasSuccessfulUserInfoKey] as? Bool ?? false
+    // VoiceOver drops the announcement when the user interrupts it: queue it once more.
+    if !success && !self.announcementRetried {
+      self.announcementRetried = true
+      self.postAnnouncement(text: text)
+      return
+    }
+    self.pendingAnnouncement = nil
+    self.announcementResult?(success ? 1 : 0)
+    self.announcementResult = nil
+    self.channel.invokeMethod(success ? "speak.onComplete" : "speak.onCancel", arguments: nil)
+  }
+
+  // VoiceOver can't be asked to drop an announcement: we only stop waiting for it.
+  private func cancelAnnouncement() {
+    guard self.pendingAnnouncement != nil else { return }
+    self.pendingAnnouncement = nil
+    self.announcementResult?(0)
+    self.announcementResult = nil
+    self.channel.invokeMethod("speak.onCancel", arguments: nil)
   }
 
   private func synthesizeToFile(text: String, fileName: String, isFullPath: Bool, result: @escaping FlutterResult) {

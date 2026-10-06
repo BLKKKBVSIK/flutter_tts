@@ -390,6 +390,29 @@ class FlutterTts {
   Future<dynamic> setSpeechRate(double rate) async =>
       await _channel.invokeMethod('setSpeechRate', rate);
 
+  /// [Future] which makes speech follow the phone's speech rate setting
+  /// instead of the rate given to [setSpeechRate].
+  /// Android: system text-to-speech rate. iOS: VoiceOver rate and voice when
+  /// VoiceOver is running, default rate otherwise.
+  /// ***Android and iOS supported only***
+  Future<dynamic> setUseSystemSpeechRate(bool enabled) async {
+    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return 0;
+    return await _channel.invokeMethod('setUseSystemSpeechRate', enabled);
+  }
+
+  /// [Future] which makes [speak] wait for the screen reader (TalkBack,
+  /// VoiceOver) to finish talking before speaking. Without a running screen
+  /// reader, [speak] behaves as usual.
+  /// Android: waits up to 10 seconds, from Android 8.
+  /// iOS: while the app is in the foreground, the text is handed to VoiceOver,
+  /// which reads it after its current phrase with its own voice and rate;
+  /// [stop] can't take it back from VoiceOver.
+  /// ***Android and iOS supported only***
+  Future<dynamic> setWaitForScreenReader(bool enabled) async {
+    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return 0;
+    return await _channel.invokeMethod('setWaitForScreenReader', enabled);
+  }
+
   /// [Future] which invokes the platform specific method for setVolume
   /// Allowed values are in the range from 0.0 (silent) to 1.0 (loudest)
   Future<dynamic> setVolume(double volume) async =>

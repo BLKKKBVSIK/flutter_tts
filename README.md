@@ -267,6 +267,26 @@ flutterTts.setContinueHandler((msg) {
 
 ```
 
+### Screen readers and the phone's speech rate
+
+***Android and iOS supported only***
+
+```dart
+// Speak at the speech rate set on the phone, instead of the one given to setSpeechRate.
+await flutterTts.setUseSystemSpeechRate(true);
+
+// Wait for TalkBack or VoiceOver to finish talking before speaking.
+await flutterTts.setWaitForScreenReader(true);
+```
+
+- **Android:** the rate comes from the system text-to-speech settings. `speak` waits while the
+  screen reader is playing speech (Android 8+), then speaks after 300 ms of silence, or after 10 s at most.
+- **iOS:** with VoiceOver running, speech uses VoiceOver's voice and rate. With the app in the
+  foreground, the text is handed to VoiceOver as a queued announcement, read after VoiceOver's
+  current phrase; `stop` can't take it back. Without VoiceOver, iOS uses its default rate, since it doesn't
+  expose the Spoken Content rate.
+- Without a running screen reader, `speak` behaves as usual.
+
 ## Getting Started
 
 For help getting started with Flutter, view our online

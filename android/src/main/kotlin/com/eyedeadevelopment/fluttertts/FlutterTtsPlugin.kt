@@ -1,5 +1,6 @@
 package com.eyedeadevelopment.fluttertts
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ContentValues
 import android.content.Context
 import android.media.AudioAttributes
@@ -12,11 +13,14 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import android.view.accessibility.AccessibilityManager
 import io.flutter.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.BinaryMessenger
@@ -59,10 +63,20 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
     private var parcelFileDescriptor: ParcelFileDescriptor? = null
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
+    private var speechRate: Float? = null
+    private var useSystemSpeechRate = false
+    private var waitForScreenReader = false
+    private val pendingSpeaks = ArrayList<Pair<MethodCall, Result>>()
+    private var screenReaderWait: Runnable? = null
 
     companion object {
         private const val SILENCE_PREFIX = "SIL_"
         private const val SYNTHESIZE_TO_FILE_PREFIX = "STF_"
+        private const val SCREEN_READER_POLL_MS = 100L
+        // Silence needed after the screen reader stops, so we don't speak between two of its phrases.
+        private const val SCREEN_READER_QUIET_MS = 300L
+        // Speak anyway after this long, so the announcement isn't lost.
+        private const val SCREEN_READER_MAX_WAIT_MS = 10_000L
     }
 
     private fun initInstance(messenger: BinaryMessenger, context: Context) {
@@ -80,6 +94,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        cancelPendingSpeaks()
         stop()
         tts!!.shutdown()
         context = null
@@ -285,44 +300,23 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
         }
         when (call.method) {
             "speak" -> {
-                var text: String = call.argument("text")!!
-                val focus: Boolean = call.argument("focus")!!
-                if (pauseText == null) {
-                    pauseText = text
-                    currentText = pauseText!!
-                }
-                if (isPaused) {
-                    // Ensure the text hasn't changed
-                    if (currentText == text) {
-                        text = pauseText!!
-                    } else {
-                        pauseText = text
-                        currentText = pauseText!!
-                        lastProgress = 0
-                    }
-                }
-                if (speaking) {
-                    // If TTS is set to queue mode, allow the utterance to be queued up rather than discarded
-                    if (queueMode == TextToSpeech.QUEUE_FLUSH) {
-                        result.success(0)
-                        return
-                    }
-                }
-                val b = speak(text, focus)
-                if (!b) {
-                    synchronized(this@FlutterTtsPlugin) {
-                        val suspendedCall = Runnable { onMethodCall(call, result) }
-                        pendingMethodCalls.add(suspendedCall)
-                    }
-                    return
-                }
-                // Only use await speak completion if queueMode is set to QUEUE_FLUSH
-                if (awaitSpeakCompletion && queueMode == TextToSpeech.QUEUE_FLUSH) {
-                    speaking = true
-                    speakResult = result
+                if (waitForScreenReader && (pendingSpeaks.isNotEmpty() || isScreenReaderSpeaking())) {
+                    deferSpeak(call, result)
                 } else {
-                    result.success(1)
+                    handleSpeak(call, result)
                 }
+            }
+
+            "setUseSystemSpeechRate" -> {
+                useSystemSpeechRate = java.lang.Boolean.parseBoolean(call.arguments.toString())
+                if (!useSystemSpeechRate) setSpeechRate(speechRate ?: systemSpeechRate)
+                result.success(1)
+            }
+
+            "setWaitForScreenReader" -> {
+                waitForScreenReader = java.lang.Boolean.parseBoolean(call.arguments.toString())
+                if (!waitForScreenReader) flushPendingSpeaks()
+                result.success(1)
             }
 
             "awaitSpeakCompletion" -> {
@@ -358,6 +352,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
             }
 
             "pause" -> {
+                cancelPendingSpeaks()
                 isPaused = true
                 if (pauseText != null) {
                     pauseText = pauseText!!.substring(lastProgress)
@@ -371,6 +366,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
             }
 
             "stop" -> {
+                cancelPendingSpeaks()
                 isPaused = false
                 pauseText = null
                 stop()
@@ -391,7 +387,8 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
                 val rate: String = call.arguments.toString()
                 // To make the FlutterTts API consistent across platforms,
                 // Android 1.0 is mapped to flutter 0.5.
-                setSpeechRate(rate.toFloat() * 2.0f)
+                speechRate = rate.toFloat() * 2.0f
+                if (!useSystemSpeechRate) setSpeechRate(speechRate!!)
                 result.success(1)
             }
 
@@ -460,8 +457,115 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
         }
     }
 
+    private fun handleSpeak(call: MethodCall, result: Result) {
+        var text: String = call.argument("text")!!
+        val focus: Boolean = call.argument("focus")!!
+        if (pauseText == null) {
+            pauseText = text
+            currentText = pauseText!!
+        }
+        if (isPaused) {
+            // Ensure the text hasn't changed
+            if (currentText == text) {
+                text = pauseText!!
+            } else {
+                pauseText = text
+                currentText = pauseText!!
+                lastProgress = 0
+            }
+        }
+        if (speaking) {
+            // If TTS is set to queue mode, allow the utterance to be queued up rather than discarded
+            if (queueMode == TextToSpeech.QUEUE_FLUSH) {
+                result.success(0)
+                return
+            }
+        }
+        val b = speak(text, focus)
+        if (!b) {
+            synchronized(this@FlutterTtsPlugin) {
+                val suspendedCall = Runnable { onMethodCall(call, result) }
+                pendingMethodCalls.add(suspendedCall)
+            }
+            return
+        }
+        // Only use await speak completion if queueMode is set to QUEUE_FLUSH
+        if (awaitSpeakCompletion && queueMode == TextToSpeech.QUEUE_FLUSH) {
+            speaking = true
+            speakResult = result
+        } else {
+            result.success(1)
+        }
+    }
+
     private fun setSpeechRate(rate: Float) {
         tts!!.setSpeechRate(rate)
+    }
+
+    // Speech rate chosen in the phone's text-to-speech settings (1.0 = normal).
+    private val systemSpeechRate: Float
+        get() = try {
+            Settings.Secure.getInt(context!!.contentResolver, Settings.Secure.TTS_DEFAULT_RATE, 100) / 100f
+        } catch (e: SecurityException) {
+            Log.e(tag, "systemSpeechRate: " + e.message)
+            1.0f
+        }
+
+    private fun isScreenReaderOn(): Boolean {
+        val accessibilityManager =
+            context?.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
+        return accessibilityManager.isEnabled &&
+            accessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN).isNotEmpty()
+    }
+
+    // Screen readers play their speech with the accessibility usage, so any active playback with
+    // that usage means the screen reader is talking. Not available before Android 8.
+    private fun isAccessibilitySpeechPlaying(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        return audioManager.activePlaybackConfigurations.any {
+            it.audioAttributes.usage == AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY
+        }
+    }
+
+    private fun isScreenReaderSpeaking(): Boolean = isScreenReaderOn() && isAccessibilitySpeechPlaying()
+
+    // Holds the speak call until the screen reader has been quiet for SCREEN_READER_QUIET_MS.
+    private fun deferSpeak(call: MethodCall, result: Result) {
+        if (queueMode == TextToSpeech.QUEUE_FLUSH) cancelPendingSpeaks()
+        pendingSpeaks.add(Pair(call, result))
+        if (screenReaderWait != null) return
+
+        val startedAt = SystemClock.elapsedRealtime()
+        var lastHeardAt = startedAt
+        val check = object : Runnable {
+            override fun run() {
+                val now = SystemClock.elapsedRealtime()
+                if (isAccessibilitySpeechPlaying()) lastHeardAt = now
+                if (now - lastHeardAt >= SCREEN_READER_QUIET_MS || now - startedAt >= SCREEN_READER_MAX_WAIT_MS) {
+                    flushPendingSpeaks()
+                } else {
+                    handler!!.postDelayed(this, SCREEN_READER_POLL_MS)
+                }
+            }
+        }
+        screenReaderWait = check
+        handler!!.postDelayed(check, SCREEN_READER_POLL_MS)
+    }
+
+    private fun flushPendingSpeaks() {
+        screenReaderWait?.let { handler!!.removeCallbacks(it) }
+        screenReaderWait = null
+        val calls = ArrayList(pendingSpeaks)
+        pendingSpeaks.clear()
+        for ((call, result) in calls) handleSpeak(call, result)
+    }
+
+    private fun cancelPendingSpeaks() {
+        screenReaderWait?.let { handler!!.removeCallbacks(it) }
+        screenReaderWait = null
+        for ((_, result) in pendingSpeaks) result.success(0)
+        pendingSpeaks.clear()
     }
 
     private fun isLanguageAvailable(locale: Locale?): Boolean {
@@ -667,6 +771,10 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
         return if (ismServiceConnectionUsable(tts)) {
             if(focus){
                 requestAudioFocus()
+            }
+            // Read before each phrase: the user can change it at any time.
+            if (useSystemSpeechRate) {
+                setSpeechRate(systemSpeechRate)
             }
 
             if (silencems > 0) {

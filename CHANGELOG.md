@@ -1,5 +1,13 @@
 # ChangeLog
 
+## 4.2.5+ezymob.1
+
+### Features
+
+- **Android, iOS:** `setUseSystemSpeechRate` makes speech follow the phone's speech rate setting.
+- **Android, iOS:** `setWaitForScreenReader` makes `speak` wait for TalkBack or VoiceOver to finish talking.
+- **iOS, macOS:** Swift Package Manager support. The Objective-C registration layer is removed.
+
 ## 4.2.5
 
 ### Fixes

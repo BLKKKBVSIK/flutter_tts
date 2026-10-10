@@ -46,7 +46,7 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 
 ## Behaviour
 
-### 4. No screen reader: same as flutter_tts 🟡
+### 4. No screen reader: same as flutter_tts ✅
 
 - **Expected:** with VoiceOver and TalkBack off, every call behaves exactly like flutter_tts 4.2.5,
   including the speech rate the app sets.
@@ -65,10 +65,20 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
   The Select to Speak case found a bug, fixed on 2026-10-10: the plugin took any spoken-feedback
   service for a screen reader and switched to the phone's speed (4.5 s). It now checks touch
   exploration, which TalkBack turns on (checked) and Select to Speak doesn't.
-- **iOS:** verified on 2026-10-06 with an earlier build (speech works, including in silent mode
-  with the `playback` audio category); not re-checked with this build.
-- **How to check:** with the screen reader off, the example app's two screens sound identical
-  (or run the timing script: tap each screen's button, compare the `TTS` log timestamps).
+- **Verified on iOS (2026-10-10)**, iPhone 17 Pro, iOS 27.2, VoiceOver off (checked by the app),
+  `example/lib/measure.dart`: same calls on both plugins, two rounds per rate, timed from
+  `speak` to the start and completion callbacks. Same results for both plugins:
+
+  | App's rate | Call → speech starts | Sentence lasts |
+  |---|---|---|
+  | 0.5 (default) | ≈ 3 ms (23 ms on the very first call) | 7.8 – 8.2 s |
+  | 0.65 | ≈ 3 ms | ≈ 4.86 s |
+
+  iOS only switches behaviour when `UIAccessibility.isVoiceOverRunning`; other features such as
+  Spoken Content don't change it (by code).
+- **How to check:** with the screen reader off, the example app's two screens sound identical.
+  Android: tap each screen's button over adb and compare the `TTS` log timestamps.
+  iOS: `flutter run --release -t lib/measure.dart` and read the `MEASURE|…` lines in the device log.
 
 ### 5. Screen reader on: speech uses the screen reader's speed 🟡
 

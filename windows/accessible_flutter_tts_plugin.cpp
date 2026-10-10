@@ -1,4 +1,4 @@
-#include "include/flutter_tts/flutter_tts_plugin.h"
+#include "include/accessible_flutter_tts/accessible_flutter_tts_plugin.h"
 // This must be included before many other Windows headers.
 #include <windows.h>
 #include <ppltasks.h>
@@ -26,11 +26,11 @@ using namespace std::chrono_literals;
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 namespace {
-	class FlutterTtsPlugin : public flutter::Plugin {
+	class AccessibleFlutterTtsPlugin : public flutter::Plugin {
 	public:
 		static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
-		FlutterTtsPlugin();
-		virtual ~FlutterTtsPlugin();
+		AccessibleFlutterTtsPlugin();
+		virtual ~AccessibleFlutterTtsPlugin();
 	private:
 		// Called when a method is called on this plugin's channel from Dart.
 		void HandleMethodCall(
@@ -59,13 +59,13 @@ namespace {
 		FlutterResult speakResult;
 	};
 
-	void FlutterTtsPlugin::RegisterWithRegistrar(
+	void AccessibleFlutterTtsPlugin::RegisterWithRegistrar(
 		flutter::PluginRegistrarWindows* registrar) {
 		methodChannel =
 			std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-				registrar->messenger(), "flutter_tts",
+				registrar->messenger(), "accessible_flutter_tts",
 				&flutter::StandardMethodCodec::GetInstance());
-		auto plugin = std::make_unique<FlutterTtsPlugin>();
+		auto plugin = std::make_unique<AccessibleFlutterTtsPlugin>();
 
 		methodChannel->SetMethodCallHandler(
 			[plugin_pointer = plugin.get()](const auto& call, auto result) {
@@ -74,7 +74,7 @@ namespace {
 		registrar->AddPlugin(std::move(plugin));
 	}
 
-	void FlutterTtsPlugin::addMplayer() {
+	void AccessibleFlutterTtsPlugin::addMplayer() {
 		mPlayer = winrt::Windows::Media::Playback::MediaPlayer::MediaPlayer();
 		auto mEndedToken =
 			mPlayer.MediaEnded([=](Windows::Media::Playback::MediaPlayer const& sender,
@@ -88,15 +88,15 @@ namespace {
 				});
 	}
 
-	bool FlutterTtsPlugin::speaking() {
+	bool AccessibleFlutterTtsPlugin::speaking() {
 		return isSpeaking;
 	}
 
-	bool FlutterTtsPlugin::paused() {
+	bool AccessibleFlutterTtsPlugin::paused() {
 		return isPaused;
 	}
 
-	winrt::Windows::Foundation::IAsyncAction FlutterTtsPlugin::asyncSpeak(const std::string text) {
+	winrt::Windows::Foundation::IAsyncAction AccessibleFlutterTtsPlugin::asyncSpeak(const std::string text) {
 		SpeechSynthesisStream speechStream{
 		  co_await synth.SynthesizeTextToStreamAsync(to_hstring(text))
 		};
@@ -107,7 +107,7 @@ namespace {
 		mPlayer.Play();
 	}
 
-	void FlutterTtsPlugin::speak(const std::string text, FlutterResult result) {
+	void AccessibleFlutterTtsPlugin::speak(const std::string text, FlutterResult result) {
 		isSpeaking = true;
 		auto my_task{ asyncSpeak(text) };
 		methodChannel->InvokeMethod("speak.onStart", NULL);
@@ -115,19 +115,19 @@ namespace {
         else result->Success(1);
 	};
 
-	void FlutterTtsPlugin::pause() {
+	void AccessibleFlutterTtsPlugin::pause() {
 		mPlayer.Pause();
 		isPaused = true;
 		methodChannel->InvokeMethod("speak.onPause", NULL);
 	}
 
-	void FlutterTtsPlugin::continuePlay() {
+	void AccessibleFlutterTtsPlugin::continuePlay() {
 		mPlayer.Play();
 		isPaused = false;
 		methodChannel->InvokeMethod("speak.onContinue", NULL);
 	}
 
-	void FlutterTtsPlugin::stop() {
+	void AccessibleFlutterTtsPlugin::stop() {
 	    methodChannel->InvokeMethod("speak.onCancel", NULL);
         if (awaitSpeakCompletion) {
             speakResult->Success(1);
@@ -138,13 +138,13 @@ namespace {
 		isSpeaking = false;
 		isPaused = false;
 	}
-	void FlutterTtsPlugin::setVolume(const double newVolume) { synth.Options().AudioVolume(newVolume); }
+	void AccessibleFlutterTtsPlugin::setVolume(const double newVolume) { synth.Options().AudioVolume(newVolume); }
 
-	void FlutterTtsPlugin::setPitch(const double newPitch) { synth.Options().AudioPitch(newPitch); }
+	void AccessibleFlutterTtsPlugin::setPitch(const double newPitch) { synth.Options().AudioPitch(newPitch); }
 
-	void FlutterTtsPlugin::setRate(const double newRate) { synth.Options().SpeakingRate(newRate + 0.5); }
+	void AccessibleFlutterTtsPlugin::setRate(const double newRate) { synth.Options().SpeakingRate(newRate + 0.5); }
 
-	void FlutterTtsPlugin::getVoices(flutter::EncodableList& voices) {
+	void AccessibleFlutterTtsPlugin::getVoices(flutter::EncodableList& voices) {
 		auto synthVoices = synth.AllVoices();
 		std::for_each(begin(synthVoices), end(synthVoices), [&voices](const VoiceInformation& voice)
 			{
@@ -171,7 +171,7 @@ namespace {
 			});
 	}
 
-	void FlutterTtsPlugin::setVoice(const std::string voiceLanguage, const std::string voiceName, FlutterResult& result) {
+	void AccessibleFlutterTtsPlugin::setVoice(const std::string voiceLanguage, const std::string voiceName, FlutterResult& result) {
 		bool found = false;
 		auto voices = synth.AllVoices();
 		VoiceInformation newVoice = synth.Voice();
@@ -188,7 +188,7 @@ namespace {
 		else result->Success(0);
 	}
 
-	void FlutterTtsPlugin::getLanguages(flutter::EncodableList& languages) {
+	void AccessibleFlutterTtsPlugin::getLanguages(flutter::EncodableList& languages) {
 		auto synthVoices = synth.AllVoices();
 		std::set<flutter::EncodableValue> languagesSet = {};
 		std::for_each(begin(synthVoices), end(synthVoices), [&languagesSet](const VoiceInformation& voice)
@@ -200,7 +200,7 @@ namespace {
 				languages.push_back(value);
 			});
 	}
-	void FlutterTtsPlugin::setLanguage(const std::string voiceLanguage, FlutterResult& result) {
+	void AccessibleFlutterTtsPlugin::setLanguage(const std::string voiceLanguage, FlutterResult& result) {
 		bool found = false;
 		auto voices = synth.AllVoices();
 		VoiceInformation newVoice = synth.Voice();
@@ -215,7 +215,7 @@ namespace {
 	}
 
 
-	FlutterTtsPlugin::FlutterTtsPlugin() {
+	AccessibleFlutterTtsPlugin::AccessibleFlutterTtsPlugin() {
 		synth = SpeechSynthesizer();
 		addMplayer();
 		isPaused = false;
@@ -224,9 +224,9 @@ namespace {
 		speakResult = FlutterResult();
 	}
 
-	FlutterTtsPlugin::~FlutterTtsPlugin() { mPlayer.Close(); }
+	AccessibleFlutterTtsPlugin::~AccessibleFlutterTtsPlugin() { mPlayer.Close(); }
 
-	void FlutterTtsPlugin::HandleMethodCall(
+	void AccessibleFlutterTtsPlugin::HandleMethodCall(
 		const flutter::MethodCall<flutter::EncodableValue>& method_call,
 		FlutterResult result) {
 		if (method_call.method_name().compare("getPlatformVersion") == 0) {
@@ -245,11 +245,11 @@ namespace {
 #pragma warning(default: 4996)
 namespace {
 
-	class FlutterTtsPlugin : public flutter::Plugin {
+	class AccessibleFlutterTtsPlugin : public flutter::Plugin {
 	public:
 		static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
-		FlutterTtsPlugin();
-		virtual ~FlutterTtsPlugin();
+		AccessibleFlutterTtsPlugin();
+		virtual ~AccessibleFlutterTtsPlugin();
 	private:
 		// Called when a method is called on this plugin's channel from Dart.
 		void HandleMethodCall(
@@ -278,13 +278,13 @@ namespace {
     	HANDLE addWaitHandle;
 	};
 
-	void FlutterTtsPlugin::RegisterWithRegistrar(
+	void AccessibleFlutterTtsPlugin::RegisterWithRegistrar(
 		flutter::PluginRegistrarWindows* registrar) {
 		methodChannel =
 			std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-				registrar->messenger(), "flutter_tts",
+				registrar->messenger(), "accessible_flutter_tts",
 				&flutter::StandardMethodCodec::GetInstance());
-		auto plugin = std::make_unique<FlutterTtsPlugin>();
+		auto plugin = std::make_unique<AccessibleFlutterTtsPlugin>();
 		methodChannel->SetMethodCallHandler(
 			[plugin_pointer = plugin.get()](const auto& call, auto result) {
 			plugin_pointer->HandleMethodCall(call, std::move(result));
@@ -293,7 +293,7 @@ namespace {
 		registrar->AddPlugin(std::move(plugin));
 	}
 
-	FlutterTtsPlugin::FlutterTtsPlugin() {
+	AccessibleFlutterTtsPlugin::AccessibleFlutterTtsPlugin() {
 		addWaitHandle = NULL;
 		isPaused = false;
 		speakResult = NULL;
@@ -313,7 +313,7 @@ namespace {
 		pitch = 0;
 	}
 
-	FlutterTtsPlugin::~FlutterTtsPlugin() {
+	AccessibleFlutterTtsPlugin::~AccessibleFlutterTtsPlugin() {
 		::CoUninitialize();
 	}
 
@@ -328,17 +328,17 @@ namespace {
         methodChannel->InvokeMethod("speak.onComplete", NULL);
     }
 
-	bool FlutterTtsPlugin::speaking()
+	bool AccessibleFlutterTtsPlugin::speaking()
 	{
 		SPVOICESTATUS status;
 		pVoice->GetStatus(&status, NULL);
 		if (status.dwRunningState == SPRS_IS_SPEAKING) return true;
 		return false;
 	}
-	bool FlutterTtsPlugin::paused() { return isPaused; }
+	bool AccessibleFlutterTtsPlugin::paused() { return isPaused; }
 
 
-	void FlutterTtsPlugin::speak(const std::string text, FlutterResult result) {
+	void AccessibleFlutterTtsPlugin::speak(const std::string text, FlutterResult result) {
 		HRESULT hr;
 		const std::string arg = "<PITCH MIDDLE = '" + std::to_string(int((pitch - 1) * 10 * (1 + (pitch < 1)) )) + "'/>" + text;
 
@@ -356,7 +356,7 @@ namespace {
 		}
 		else result->Success(1);
 	}
-	void FlutterTtsPlugin::pause()
+	void AccessibleFlutterTtsPlugin::pause()
 	{
 		if (isPaused == false)
 		{
@@ -365,31 +365,31 @@ namespace {
 		}
 	    methodChannel->InvokeMethod("speak.onPause", NULL);
 	}
-	void FlutterTtsPlugin::continuePlay()
+	void AccessibleFlutterTtsPlugin::continuePlay()
 	{
 		isPaused = false;
 		pVoice->Resume();
 	    methodChannel->InvokeMethod("speak.onContinue", NULL);
 	}
-	void FlutterTtsPlugin::stop()
+	void AccessibleFlutterTtsPlugin::stop()
 	{
 		pVoice->Speak(L"", 2, NULL);
 		pVoice->Resume();
 		isPaused = false;
 	    methodChannel->InvokeMethod("speak.onCancel", NULL);
 	}
-	void FlutterTtsPlugin::setVolume(const double newVolume)
+	void AccessibleFlutterTtsPlugin::setVolume(const double newVolume)
 	{
 		const USHORT volume = (short)(100 * newVolume);
 		pVoice->SetVolume(volume);
 	}
-	void FlutterTtsPlugin::setPitch(const double newPitch) {pitch = newPitch;}
-	void FlutterTtsPlugin::setRate(const double newRate)
+	void AccessibleFlutterTtsPlugin::setPitch(const double newPitch) {pitch = newPitch;}
+	void AccessibleFlutterTtsPlugin::setRate(const double newRate)
 	{
 		const long speechRate = (long)((newRate - 0.5) * 15);
 		pVoice->SetRate(speechRate);
 	}
-	void FlutterTtsPlugin::getVoices(flutter::EncodableList& voices) {
+	void AccessibleFlutterTtsPlugin::getVoices(flutter::EncodableList& voices) {
 		HRESULT hr;
 		IEnumSpObjectTokens* cpEnum = NULL;
 		hr = SpEnumTokens(SPCAT_VOICES, NULL, NULL, &cpEnum);
@@ -425,7 +425,7 @@ namespace {
 			cpVoiceToken->Release();
 		}
 	}
-	void FlutterTtsPlugin::setVoice(const std::string voiceLanguage, const std::string voiceName, FlutterResult& result) {
+	void AccessibleFlutterTtsPlugin::setVoice(const std::string voiceLanguage, const std::string voiceName, FlutterResult& result) {
 		HRESULT hr;
 		IEnumSpObjectTokens* cpEnum = NULL;
 		hr = SpEnumTokens(SPCAT_VOICES, NULL, NULL, &cpEnum);
@@ -463,7 +463,7 @@ namespace {
 		}
 		result->Success(success ? 1 : 0);
 	}
-	void FlutterTtsPlugin::getLanguages(flutter::EncodableList& languages)
+	void AccessibleFlutterTtsPlugin::getLanguages(flutter::EncodableList& languages)
 	{
 		HRESULT hr;
 		IEnumSpObjectTokens* cpEnum = NULL;
@@ -500,7 +500,7 @@ namespace {
             });
 	}
 
-	void FlutterTtsPlugin::setLanguage(const std::string voiceLanguage, FlutterResult& result) {
+	void AccessibleFlutterTtsPlugin::setLanguage(const std::string voiceLanguage, FlutterResult& result) {
 		HRESULT hr;
 		IEnumSpObjectTokens* cpEnum = NULL;
 		hr = SpEnumTokens(SPCAT_VOICES, NULL, NULL, &cpEnum);
@@ -537,7 +537,7 @@ namespace {
 	}
 
 
-	void FlutterTtsPlugin::HandleMethodCall(
+	void AccessibleFlutterTtsPlugin::HandleMethodCall(
 		const flutter::MethodCall<flutter::EncodableValue>& method_call,
 		FlutterResult result) {
 
@@ -577,7 +577,7 @@ namespace {
 			else result->Success(0);
 		}
 		else if (method_call.method_name().compare("pause") == 0) {
-			FlutterTtsPlugin::pause();
+			AccessibleFlutterTtsPlugin::pause();
 			result->Success(1);
 		}
 		else if (method_call.method_name().compare("setLanguage") == 0) {
@@ -651,9 +651,9 @@ namespace {
 	}
 }
 
-void FlutterTtsPluginRegisterWithRegistrar(
+void AccessibleFlutterTtsPluginRegisterWithRegistrar(
 	FlutterDesktopPluginRegistrarRef registrar) {
-	FlutterTtsPlugin::RegisterWithRegistrar(
+	AccessibleFlutterTtsPlugin::RegisterWithRegistrar(
 		flutter::PluginRegistrarManager::GetInstance()
 		->GetRegistrar<flutter::PluginRegistrarWindows>(registrar));
 }

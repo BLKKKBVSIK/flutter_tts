@@ -4,7 +4,7 @@ if(POLICY CMP0153)
     cmake_policy(SET CMP0153 NEW)
 endif()
 
-set(PROJECT_NAME "flutter_tts")
+set(PROJECT_NAME "accessible_flutter_tts")
 project(${PROJECT_NAME} LANGUAGES CXX)
 
 find_program(NUGET_EXE NAMES nuget)
@@ -19,10 +19,10 @@ execute_process(
         -OutputDirectory ${CMAKE_BINARY_DIR}/packages
 )
 
-set(PLUGIN_NAME "flutter_tts_plugin")
+set(PLUGIN_NAME "accessible_flutter_tts_plugin")
 
 add_library(${PLUGIN_NAME} SHARED
-        "flutter_tts_plugin.cpp"
+        "accessible_flutter_tts_plugin.cpp"
 )
 
 apply_standard_settings(${PLUGIN_NAME})
@@ -52,4 +52,4 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE
         "${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.targets"
 )
 
-set(flutter_tts_bundled_libraries "" PARENT_SCOPE)
+set(accessible_flutter_tts_bundled_libraries "" PARENT_SCOPE)

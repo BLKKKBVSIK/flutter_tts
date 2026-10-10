@@ -1,4 +1,4 @@
-package com.eyedeadevelopment.fluttertts
+package fr.ezymob.accessiblefluttertts
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ContentValues
@@ -35,8 +35,8 @@ import java.util.MissingResourceException
 import java.util.UUID
 
 
-/** FlutterTtsPlugin  */
-class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
+/** AccessibleFlutterTtsPlugin  */
+class AccessibleFlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
     private var handler: Handler? = null
     private var methodChannel: MethodChannel? = null
     private var speakResult: Result? = null
@@ -63,9 +63,9 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
     private var parcelFileDescriptor: ParcelFileDescriptor? = null
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
+    // Rate set by the app, restored when the screen reader is turned off.
     private var speechRate: Float? = null
-    private var useSystemSpeechRate = false
-    private var waitForScreenReader = false
+    private var screenReaderRateApplied = false
     private val pendingSpeaks = ArrayList<Pair<MethodCall, Result>>()
     private var screenReaderWait: Runnable? = null
 
@@ -81,7 +81,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
 
     private fun initInstance(messenger: BinaryMessenger, context: Context) {
         this.context = context
-        methodChannel = MethodChannel(messenger, "flutter_tts")
+        methodChannel = MethodChannel(messenger, "accessible_flutter_tts")
         methodChannel!!.setMethodCallHandler(this)
         handler = Handler(Looper.getMainLooper())
         bundle = Bundle()
@@ -232,7 +232,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
     private val onInitListenerWithCallback: TextToSpeech.OnInitListener =
         TextToSpeech.OnInitListener { status ->
             // Handle pending method calls (sent while TTS was initializing)
-            synchronized(this@FlutterTtsPlugin) {
+            synchronized(this@AccessibleFlutterTtsPlugin) {
                 ttsStatus = status
                 for (call in pendingMethodCalls) {
                     call.run()
@@ -263,7 +263,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
     private val onInitListenerWithoutCallback: TextToSpeech.OnInitListener =
         TextToSpeech.OnInitListener { status ->
             // Handle pending method calls (sent while TTS was initializing)
-            synchronized(this@FlutterTtsPlugin) {
+            synchronized(this@AccessibleFlutterTtsPlugin) {
                 ttsStatus = status
                 for (call in pendingMethodCalls) {
                     call.run()
@@ -290,7 +290,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         // If TTS is still loading
-        synchronized(this@FlutterTtsPlugin) {
+        synchronized(this@AccessibleFlutterTtsPlugin) {
             if (ttsStatus == null) {
                 // Suspend method call until the TTS engine is ready
                 val suspendedCall = Runnable { onMethodCall(call, result) }
@@ -300,23 +300,11 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
         }
         when (call.method) {
             "speak" -> {
-                if (waitForScreenReader && (pendingSpeaks.isNotEmpty() || isScreenReaderSpeaking())) {
+                if (pendingSpeaks.isNotEmpty() || isScreenReaderSpeaking()) {
                     deferSpeak(call, result)
                 } else {
                     handleSpeak(call, result)
                 }
-            }
-
-            "setUseSystemSpeechRate" -> {
-                useSystemSpeechRate = java.lang.Boolean.parseBoolean(call.arguments.toString())
-                if (!useSystemSpeechRate) setSpeechRate(speechRate ?: systemSpeechRate)
-                result.success(1)
-            }
-
-            "setWaitForScreenReader" -> {
-                waitForScreenReader = java.lang.Boolean.parseBoolean(call.arguments.toString())
-                if (!waitForScreenReader) flushPendingSpeaks()
-                result.success(1)
             }
 
             "awaitSpeakCompletion" -> {
@@ -388,7 +376,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
                 // To make the FlutterTts API consistent across platforms,
                 // Android 1.0 is mapped to flutter 0.5.
                 speechRate = rate.toFloat() * 2.0f
-                if (!useSystemSpeechRate) setSpeechRate(speechRate!!)
+                setSpeechRate(speechRate!!)
                 result.success(1)
             }
 
@@ -483,7 +471,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
         }
         val b = speak(text, focus)
         if (!b) {
-            synchronized(this@FlutterTtsPlugin) {
+            synchronized(this@AccessibleFlutterTtsPlugin) {
                 val suspendedCall = Runnable { onMethodCall(call, result) }
                 pendingMethodCalls.add(suspendedCall)
             }
@@ -510,6 +498,18 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
             Log.e(tag, "systemSpeechRate: " + e.message)
             1.0f
         }
+
+    // With a screen reader on, speak at the speed chosen in the phone's settings; otherwise keep
+    // the app's rate, as flutter_tts does. Checked before each phrase: either can change any time.
+    private fun applyScreenReaderRate() {
+        if (isScreenReaderOn()) {
+            setSpeechRate(systemSpeechRate)
+            screenReaderRateApplied = true
+        } else if (screenReaderRateApplied) {
+            setSpeechRate(speechRate ?: systemSpeechRate)
+            screenReaderRateApplied = false
+        }
+    }
 
     private fun isScreenReaderOn(): Boolean {
         val accessibilityManager =
@@ -772,11 +772,7 @@ class FlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
             if(focus){
                 requestAudioFocus()
             }
-            // Read before each phrase: the user can change it at any time.
-            if (useSystemSpeechRate) {
-                setSpeechRate(systemSpeechRate)
-            }
-
+            applyScreenReaderRate()
             if (silencems > 0) {
                 tts!!.playSilentUtterance(
                     silencems.toLong(),

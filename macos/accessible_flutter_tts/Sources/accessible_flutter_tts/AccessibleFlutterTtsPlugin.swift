@@ -2,7 +2,7 @@ import FlutterMacOS
 import Foundation
 import AVFoundation
 
-public class FlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
+public class AccessibleFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
   final var iosAudioCategoryKey = "iosAudioCategoryKey"
   final var iosAudioCategoryOptionsKey = "iosAudioCategoryOptionsKey"
   
@@ -33,8 +33,8 @@ public class FlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizerDeleg
   }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "flutter_tts", binaryMessenger: registrar.messenger)
-    let instance = FlutterTtsPlugin(channel: channel)
+    let channel = FlutterMethodChannel(name: "accessible_flutter_tts", binaryMessenger: registrar.messenger)
+    let instance = AccessibleFlutterTtsPlugin(channel: channel)
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
 

@@ -1,5 +1,5 @@
-name: flutter_tts
-description: A flutter plugin for Text to Speech.  This plugin is supported on iOS, macOS, Android, Web, & Windows.
+name: accessible_flutter_tts
+description: Drop-in replacement for flutter_tts that waits for VoiceOver or TalkBack to finish and speaks at the screen reader's speed.
 version: 4.2.5+ezymob.1
 homepage: https://github.com/BLKKKBVSIK/flutter_tts
 
@@ -13,19 +13,19 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.eyedeadevelopment.fluttertts
-        pluginClass: FlutterTtsPlugin
+        package: fr.ezymob.accessiblefluttertts
+        pluginClass: AccessibleFlutterTtsPlugin
       ios:
-        pluginClass: SwiftFlutterTtsPlugin
+        pluginClass: AccessibleFlutterTtsPlugin
       macos:
-        pluginClass: FlutterTtsPlugin
+        pluginClass: AccessibleFlutterTtsPlugin
       windows:
-        pluginClass: FlutterTtsPlugin
+        pluginClass: AccessibleFlutterTtsPlugin
         supportedVariants:
           - uwp
           - win32
       web:
-        pluginClass: FlutterTtsPlugin
+        pluginClass: AccessibleFlutterTtsPlugin
         fileName: flutter_tts_web.dart
 
 environment:

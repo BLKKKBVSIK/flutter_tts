@@ -4,19 +4,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "flutter_tts",
+    name: "accessible_flutter_tts",
     platforms: [
         .iOS("13.0")
     ],
     products: [
-        .library(name: "flutter-tts", targets: ["flutter_tts"])
+        .library(name: "accessible-flutter-tts", targets: ["accessible_flutter_tts"])
     ],
     dependencies: [
         .package(name: "FlutterFramework", path: "../FlutterFramework")
     ],
     targets: [
         .target(
-            name: "flutter_tts",
+            name: "accessible_flutter_tts",
             dependencies: [
                 .product(name: "FlutterFramework", package: "FlutterFramework")
             ]

@@ -1,5 +1,5 @@
-name: flutter_tts_example
-description: "Demonstrates how to use the flutter_tts plugin."
+name: accessible_flutter_tts_example
+description: "Compares flutter_tts with accessible_flutter_tts while a screen reader is talking."
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -36,7 +36,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
-  flutter_tts:
+  # The original plugin, for comparison.
+  flutter_tts: 4.2.5
+  accessible_flutter_tts:
     path: ../
 
 dev_dependencies:

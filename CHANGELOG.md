@@ -4,8 +4,10 @@
 
 ### Features
 
-- **Android, iOS:** `setUseSystemSpeechRate` makes speech follow the phone's speech rate setting.
-- **Android, iOS:** `setWaitForScreenReader` makes `speak` wait for TalkBack or VoiceOver to finish talking.
+- Renamed to `accessible_flutter_tts`, with its own platform channel and native class names, so it
+  can be installed next to flutter_tts. The Dart API is unchanged.
+- **Android, iOS:** with TalkBack or VoiceOver running, `speak` waits for the screen reader to
+  finish talking and uses its speed. Without a screen reader, nothing changes.
 - **iOS, macOS:** Swift Package Manager support. The Objective-C registration layer is removed.
 
 ## 4.2.5

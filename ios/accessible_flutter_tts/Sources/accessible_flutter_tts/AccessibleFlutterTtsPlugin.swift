@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 import AVFoundation
 
-public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
+public class AccessibleFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizerDelegate {
   let iosAudioCategoryKey = "iosAudioCategoryKey"
   let iosAudioCategoryOptionsKey = "iosAudioCategoryOptionsKey"
   let iosAudioModeKey = "iosAudioModeKey"
@@ -17,8 +17,6 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
   var autoStopSharedSession: Bool = true
   var speakResult: FlutterResult? = nil
   var synthResult: FlutterResult? = nil
-  var useSystemSpeechRate: Bool = false
-  var waitForScreenReader: Bool = false
   // Phrase handed to VoiceOver, until VoiceOver says it has finished reading it.
   var pendingAnnouncement: String? = nil
   var announcementResult: FlutterResult? = nil
@@ -46,8 +44,8 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
   }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "flutter_tts", binaryMessenger: registrar.messenger())
-    let instance = SwiftFlutterTtsPlugin(channel: channel)
+    let channel = FlutterMethodChannel(name: "accessible_flutter_tts", binaryMessenger: registrar.messenger())
+    let instance = AccessibleFlutterTtsPlugin(channel: channel)
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
 
@@ -59,14 +57,6 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       break
     case "awaitSpeakCompletion":
       self.awaitSpeakCompletion = call.arguments as! Bool
-      result(1)
-      break
-    case "setUseSystemSpeechRate":
-      self.useSystemSpeechRate = call.arguments as! Bool
-      result(1)
-      break
-    case "setWaitForScreenReader":
-      self.waitForScreenReader = call.arguments as! Bool
       result(1)
       break
     case "awaitSynthCompletion":
@@ -167,8 +157,7 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       } else {
         result(0)
       }
-    } else if self.waitForScreenReader && UIAccessibility.isVoiceOverRunning
-                && UIApplication.shared.applicationState == .active {
+    } else if UIAccessibility.isVoiceOverRunning && UIApplication.shared.applicationState == .active {
       self.announce(text: text, result: result)
     } else {
       let utterance = AVSpeechUtterance(string: text)
@@ -177,15 +166,10 @@ public class SwiftFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthesizer
       } else {
         utterance.voice = AVSpeechSynthesisVoice(language: self.language)
       }
-      if self.useSystemSpeechRate {
-        // iOS doesn't expose the Spoken Content rate: use the default rate,
-        // or VoiceOver's voice and rate when VoiceOver is running.
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        if #available(iOS 14.0, *) {
-          utterance.prefersAssistiveTechnologySettings = true
-        }
-      } else {
-        utterance.rate = self.rate
+      utterance.rate = self.rate
+      // In the background, VoiceOver doesn't read announcements: speak with VoiceOver's voice and rate.
+      if #available(iOS 14.0, *), UIAccessibility.isVoiceOverRunning {
+        utterance.prefersAssistiveTechnologySettings = true
       }
       utterance.volume = self.volume
       utterance.pitchMultiplier = self.pitch

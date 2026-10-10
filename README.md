@@ -1,8 +1,46 @@
-# Text To Speech
+# accessible_flutter_tts
 
-[![pub package](https://img.shields.io/pub/v/flutter_tts.svg?style=for-the-badge&colorB=green)](https://pub.dartlang.org/packages/flutter_tts)
+A drop-in replacement for [flutter_tts](https://github.com/dlutton/flutter_tts) 4.2.5 that stays out
+of the way of screen readers.
 
-A flutter text to speech plugin (Swift,Kotlin)
+- **No screen reader running:** behaves exactly like flutter_tts.
+- **VoiceOver or TalkBack running:** speech waits for the screen reader to finish talking, and uses
+  the screen reader's speed instead of the rate set by the app.
+
+## Switching from flutter_tts
+
+Replace the dependency:
+
+```yaml
+dependencies:
+  accessible_flutter_tts:
+    git:
+      url: https://github.com/BLKKKBVSIK/flutter_tts.git
+      ref: v4.2.5-ezymob.1
+```
+
+and the import:
+
+```dart
+import 'package:accessible_flutter_tts/flutter_tts.dart';
+```
+
+Nothing else changes: same `FlutterTts` class, same methods and arguments. The screen reader
+behaviour turns on by itself.
+
+The plugin uses its own platform channel and native class names, so it can sit in the same app as
+flutter_tts.
+
+## How it works with a screen reader
+
+- **iOS:** while the app is in the foreground, the text is handed to VoiceOver as a queued
+  announcement: VoiceOver reads it after its current phrase, with its own voice and speed. `stop`
+  can't take it back from VoiceOver. In the background, VoiceOver doesn't read announcements, so
+  the plugin speaks itself with VoiceOver's voice and speed, without waiting.
+- **Android (8+):** `speak` waits while TalkBack is playing speech, then speaks after 300 ms of
+  silence, or after 10 s at most. The speed comes from the phone's text-to-speech settings.
+
+The rest of this file is flutter_tts's documentation, which applies unchanged.
 
 ## Features
 
@@ -266,26 +304,6 @@ flutterTts.setContinueHandler((msg) {
 });
 
 ```
-
-### Screen readers and the phone's speech rate
-
-***Android and iOS supported only***
-
-```dart
-// Speak at the speech rate set on the phone, instead of the one given to setSpeechRate.
-await flutterTts.setUseSystemSpeechRate(true);
-
-// Wait for TalkBack or VoiceOver to finish talking before speaking.
-await flutterTts.setWaitForScreenReader(true);
-```
-
-- **Android:** the rate comes from the system text-to-speech settings. `speak` waits while the
-  screen reader is playing speech (Android 8+), then speaks after 300 ms of silence, or after 10 s at most.
-- **iOS:** with VoiceOver running, speech uses VoiceOver's voice and rate. With the app in the
-  foreground, the text is handed to VoiceOver as a queued announcement, read after VoiceOver's
-  current phrase; `stop` can't take it back. Without VoiceOver, iOS uses its default rate, since it doesn't
-  expose the Spoken Content rate.
-- Without a running screen reader, `speak` behaves as usual.
 
 ## Getting Started
 

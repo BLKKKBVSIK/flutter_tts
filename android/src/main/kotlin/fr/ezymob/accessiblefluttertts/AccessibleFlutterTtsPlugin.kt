@@ -1,6 +1,5 @@
 package fr.ezymob.accessiblefluttertts
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ContentValues
 import android.content.Context
 import android.media.AudioAttributes
@@ -511,11 +510,12 @@ class AccessibleFlutterTtsPlugin : MethodCallHandler, FlutterPlugin {
         }
     }
 
+    // Screen readers (TalkBack, Samsung's Voice Assistant…) turn on touch exploration. Spoken
+    // feedback alone isn't enough: Select to Speak declares it without being a screen reader.
     private fun isScreenReaderOn(): Boolean {
         val accessibilityManager =
             context?.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
-        return accessibilityManager.isEnabled &&
-            accessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN).isNotEmpty()
+        return accessibilityManager.isEnabled && accessibilityManager.isTouchExplorationEnabled
     }
 
     // Screen readers play their speech with the accessibility usage, so any active playback with

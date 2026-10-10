@@ -52,10 +52,23 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
   including the speech rate the app sets.
 - **Status (2026-10-10):** without a screen reader, the code runs upstream's paths unchanged:
   the app's rate is kept (Android only restores it if a screen reader had changed it), no waiting,
-  no announcements. Verified on device on 2026-10-06 with the earlier build (speech works,
-  including in silent mode with the `playback` audio category); not re-checked with this build.
-- **How to check:** with the screen reader off, the example app's two screens sound identical, on
-  Android and iOS.
+  no announcements.
+- **Verified on Android (2026-10-10)**, Nothing Phone (1), Android 14, example app, timings from the
+  plugins' logs. Same results for flutter_tts 4.2.5 and accessible_flutter_tts:
+
+  | Phone state | Tap → speech starts | Sentence lasts |
+  |---|---|---|
+  | Default speech speed | ≈ 550 ms (incl. the example's 300 ms delay) | ≈ 8.2 s |
+  | Phone speech speed ×2 | ≈ 550 ms | ≈ 8.2 s (app's rate kept) |
+  | Select to Speak on, phone speed ×2 | ≈ 550 ms | ≈ 8.2 s |
+
+  The Select to Speak case found a bug, fixed on 2026-10-10: the plugin took any spoken-feedback
+  service for a screen reader and switched to the phone's speed (4.5 s). It now checks touch
+  exploration, which TalkBack turns on (checked) and Select to Speak doesn't.
+- **iOS:** verified on 2026-10-06 with an earlier build (speech works, including in silent mode
+  with the `playback` audio category); not re-checked with this build.
+- **How to check:** with the screen reader off, the example app's two screens sound identical
+  (or run the timing script: tap each screen's button, compare the `TTS` log timestamps).
 
 ### 5. Screen reader on: speech uses the screen reader's speed 🟡
 
@@ -65,7 +78,8 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
   - iOS: in the foreground, VoiceOver reads the text itself (queued announcement), so it uses its
     own voice and speed. In the background, `prefersAssistiveTechnologySettings` applies VoiceOver's
     settings. Not verified on a device.
-  - Android: uses the system text-to-speech rate (`Settings.Secure.TTS_DEFAULT_RATE`). TalkBack's
+  - Android: a screen reader is detected by touch exploration (TalkBack turns it on). Speech then
+    uses the system text-to-speech rate (`Settings.Secure.TTS_DEFAULT_RATE`). TalkBack's
     own speed slider may not be readable by apps; if it isn't, this goal can't be fully met on
     Android. Not verified: no Android device available on 2026-10-10.
 - **How to check:** change the screen reader's speed, tap the button on the example's Accessible

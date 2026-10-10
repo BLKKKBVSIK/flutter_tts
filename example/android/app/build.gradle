@@ -13,14 +13,14 @@ if (localPropertiesFile.exists()) {
 }
 
 android {
-    compileSdk 35
+    compileSdk flutter.compileSdkVersion
     namespace 'com.eyedeadevelopment.example'
 
 
     defaultConfig {
-        applicationId "com.eyedeadevelopment.flutterttsexample"
-        minSdkVersion 23
-        targetSdkVersion 35
+        applicationId "fr.ezymob.flutterttsexample"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion flutter.targetSdkVersion
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

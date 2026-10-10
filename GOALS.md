@@ -20,17 +20,18 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 - **How to check:** `grep '^name:' pubspec.yaml`; build an app that depends on the plugin, with
   Swift Package Manager on.
 
-### 2. It can be added to any Flutter project 🟡
+### 2. It can be added to any Flutter project ✅
 
-- **Expected:** a Flutter app adds the dependency, runs `flutter pub get`, and builds on Android and
-  iOS (Swift Package Manager and CocoaPods), plus macOS, web and Windows as upstream does.
-- **Status (2026-10-10):** a fresh app using a **git dependency** (local copy of the repo named
-  `flutter_tts.git`, like the GitHub repo) builds for iOS with Swift Package Manager, iOS with
-  CocoaPods, Android, macOS and web, also with flutter_tts 4.2.5 installed next to it.
-  Not done: Windows build (needs a Windows machine); the branch isn't pushed or tagged yet, so the
-  GitHub URL in the README doesn't resolve.
-- **How to check:** a fresh `flutter create` app with a git dependency on the pushed fork builds
-  for each platform.
+- **Expected:** a Flutter app adds the git dependency, runs `flutter pub get`, and builds on
+  **Android and iOS** (Swift Package Manager and CocoaPods). Only these two platforms are targeted
+  (decided 2026-10-10); macOS, web and Windows keep upstream's code but aren't required.
+- **Verified (2026-10-10):** a fresh `flutter create` app with a git dependency on
+  `https://github.com/BLKKKBVSIK/flutter_tts.git`, branch `ezymob/screen-reader-aware`, builds for
+  iOS (Swift Package Manager) and Android. With a local copy of the repo, it also built for iOS with
+  CocoaPods, and with flutter_tts 4.2.5 installed next to it.
+- **Note:** the README's install snippet uses the tag `v4.2.5-ezymob.1`, which doesn't exist yet.
+  Until it's created, apps use `ref: ezymob/screen-reader-aware`.
+- **How to check:** a fresh `flutter create` app with the git dependency builds for Android and iOS.
 
 ### 3. It replaces flutter_tts with nothing else to change ✅
 
@@ -116,3 +117,4 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 
 - 2026-10-10: changing the import line is acceptable (goal 3).
 - 2026-10-10: apps get the plugin through a git dependency on `BLKKKBVSIK/flutter_tts`.
+- 2026-10-10: only Android and iOS are targeted (goal 2).

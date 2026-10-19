@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:accessible_flutter_tts/flutter_tts.dart' as accessible;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -146,7 +148,8 @@ class _SpeakScreenState extends State<SpeakScreen> {
   Future<void> _speak() async {
     // A double-tap stops the screen reader, so it can't be talking when the button is
     // activated: make it talk, then speak while it still is.
-    await SemanticsService.sendAnnouncement(View.of(context), _screenReaderText, TextDirection.ltr);
+    // Not awaited: on iOS, Flutter never answers this call.
+    unawaited(SemanticsService.sendAnnouncement(View.of(context), _screenReaderText, TextDirection.ltr));
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await widget.tts.speak(_sentence);
   }

@@ -123,22 +123,43 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
   two screen reader speeds (Android: read the `MEASURE|…` lines with `adb logcat -s flutter`;
   iOS: read them on screen). Our lines change with the screen reader's speed, flutter_tts's don't.
 
-### 6. Screen reader on: speech starts only after the screen reader stops 🟡
+### 6. Screen reader on: speech starts only after the screen reader stops ✅
 
 - **Expected:** the app's speech never overlaps the screen reader. If the screen reader is talking,
   the app waits for it to finish, then speaks.
-- **Status (2026-10-10):**
-  - iOS: the text is handed to VoiceOver as a queued announcement while the app is in the
-    foreground. The 2026-10-06 test (VoiceOver cut on tap) couldn't show waiting: a double-tap
-    stops VoiceOver by itself. The example now makes the screen reader read a long text, then
-    speaks 300 ms later, while it's still talking. To be tested on the iPhone.
-  - Android: waits while accessibility audio is playing (300 ms of silence, 10 s at most).
-    Not tested on a device.
-  - Known limit, iOS background / locked screen: VoiceOver doesn't read announcements and iOS
-    doesn't tell apps when VoiceOver talks, so the plugin speaks without waiting. Overlap is
-    possible there (for example with VoiceOver reading a notification).
-- **How to check:** with the screen reader on, tap the button on each screen of the example. On
-  Original, both voices overlap; on Accessible, the sentence comes after the screen reader's text.
+- **Status (2026-10-19):** done and verified on iOS and Android, app in the foreground.
+- **Test:** `example/lib/overlap.dart`. For each plugin, twice: the screen reader reads a long text,
+  and `speak` is called 0.5 s later while it's still talking.
+- **Verified on Android (2026-10-19)**, Nothing Phone (1), TalkBack on. Audio timeline polled on the
+  phone (`dumpsys audio`, ~100 ms) next to the app's events:
+
+  | Round | TalkBack talks | App talks |
+  |---|---|---|
+  | flutter_tts 1 | 0.05 – 4.03 s | 4.03 – 7.96 s |
+  | accessible 1 | 0.05 – 4.01 s | 4.43 – 6.86 s (0.42 s after) |
+  | flutter_tts 2 | 0.05 – 3.99 s | 3.99 – 7.90 s |
+  | accessible 2 | 0.06 – 3.94 s | 4.28 – 6.79 s (0.34 s after) |
+
+  No overlap with either plugin: TalkBack and the app used the same speech engine (Google's), which
+  reads one request at a time, so even flutter_tts queued behind TalkBack. That only holds when both
+  use the same engine; our plugin waits by watching what's actually playing, whatever the engine.
+- **Verified on iOS (2026-10-19)**, iPhone 17 Pro, VoiceOver on at normal speed, screen recording
+  analysed (audio segments + the app's events):
+
+  | Round | VoiceOver talks | App talks |
+  |---|---|---|
+  | flutter_tts 1 | 16.38 – 28.05 s | 16.92 – 21.61 s (overlaps) |
+  | accessible 1 | 29.60 – 41.27 s | 41.59 – 46.44 s (0.32 s after) |
+  | flutter_tts 2 | 54.80 – 66.47 s | 55.30 – 60.04 s (overlaps) |
+  | accessible 2 | 68.05 – 79.73 s | 80.05 – 84.89 s (0.32 s after) |
+
+  flutter_tts talks over VoiceOver for its whole sentence; ours waits for VoiceOver to finish.
+- **Known limit, iOS background / locked screen:** VoiceOver doesn't read announcements and iOS
+  doesn't tell apps when VoiceOver talks, so the plugin speaks without waiting. Overlap is possible
+  there (for example with VoiceOver reading a notification). Not tested.
+- **How to check:** with the screen reader on, `flutter run --release -t lib/overlap.dart`.
+  Android: poll `dumpsys audio` for `USAGE_ASSISTANCE_ACCESSIBILITY` (screen reader) and
+  `USAGE_MEDIA` (app). iOS: screen recording, then compare the audio with the `OVERLAP|…` events.
 
 ## Decisions
 

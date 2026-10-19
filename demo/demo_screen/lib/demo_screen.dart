@@ -178,7 +178,9 @@ const _english = _Texts(
   language: 'en-US',
   tripDetails: 'Trip to Gare de Lyon. Bus 91 towards Gare Montparnasse, platform B. '
       'Next departure in two minutes, then change for metro line 1.',
-  nextStop: 'Next stop, Gare de Lyon. Please get ready to get off.',
+  nextStop: 'Next stop, Gare de Lyon. Change here for metro lines 1 and 14, RER A and RER D, '
+      'and the main line trains. The exit is on the right side of the bus. '
+      'Please take all your belongings with you and get ready to get off.',
   voiceOverOn: 'VoiceOver is on',
   voiceOverOff: 'VoiceOver is off',
   appRate: 'Speech rate set by the app: 0.5',
@@ -196,7 +198,9 @@ const _french = _Texts(
   language: 'fr-FR',
   tripDetails: 'Trajet vers la Gare de Lyon. Bus 91 en direction de la Gare Montparnasse, '
       'quai B. Prochain passage dans deux minutes, puis correspondance avec la ligne 1 du métro.',
-  nextStop: 'Prochain arrêt, Gare de Lyon. Préparez-vous à descendre.',
+  nextStop: 'Prochain arrêt, Gare de Lyon. Correspondance avec les lignes 1 et 14 du métro, '
+      'les RER A et D, et les trains grandes lignes. La sortie se fait du côté droit du bus. '
+      'Pensez à prendre toutes vos affaires et préparez-vous à descendre.',
   voiceOverOn: 'VoiceOver est activé',
   voiceOverOff: 'VoiceOver est désactivé',
   appRate: 'Vitesse demandée par l\'app : 0,5',

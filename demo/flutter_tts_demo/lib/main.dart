@@ -2,7 +2,11 @@ import 'package:demo_screen/demo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-void main() => runApp(DemoApp(pluginName: 'flutter_tts', color: Colors.deepOrange, tts: _Tts()));
+void main() {
+  // The plugin needs Flutter to be started before it's created.
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(DemoApp(pluginName: 'flutter_tts', color: Colors.deepOrange, tts: _Tts()));
+}
 
 /// The same calls in both demo apps: only the import above differs.
 class _Tts implements DemoTts {

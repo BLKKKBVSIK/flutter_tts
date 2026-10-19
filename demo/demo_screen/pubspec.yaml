@@ -1,0 +1,15 @@
+name: demo_screen
+description: "The screen shared by the two demo apps, so they only differ by their text-to-speech plugin."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.13.2
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0

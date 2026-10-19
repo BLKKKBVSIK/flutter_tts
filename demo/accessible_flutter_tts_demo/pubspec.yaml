@@ -1,0 +1,23 @@
+name: accessible_flutter_tts_demo
+description: "Demo: accessible_flutter_tts with VoiceOver."
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  demo_screen:
+    path: ../demo_screen
+  accessible_flutter_tts:
+    git:
+      url: https://github.com/BLKKKBVSIK/flutter_tts.git
+      ref: v4.2.5-ezymob.2
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

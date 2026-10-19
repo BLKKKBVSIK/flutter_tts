@@ -81,11 +81,11 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
   Android: tap each screen's button over adb and compare the `TTS` log timestamps.
   iOS: `flutter run --release -t lib/measure.dart` and read the `MEASURE|…` lines in the device log.
 
-### 5. Screen reader on: speech uses the screen reader's speed 🟡
+### 5. Screen reader on: speech uses the screen reader's speed ✅
 
 - **Expected:** with VoiceOver or TalkBack on, the app's speech runs at the speed set for
   VoiceOver or TalkBack, whatever rate the app asked for.
-- **Status (2026-10-19):** iOS done; Android to test.
+- **Status (2026-10-19):** done and verified on iOS and Android.
   - iOS: in the foreground, VoiceOver reads the text itself (queued announcement), so it uses its
     own voice and speed. In the background, `prefersAssistiveTechnologySettings` applies VoiceOver's
     settings.
@@ -106,11 +106,22 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
     **Known limit:** text in another language than the phone's is read at that language's VoiceOver
     speed, not the user's current one. iOS offers no way around it.
   - Android: a screen reader is detected by touch exploration (TalkBack turns it on). Speech then
-    uses the system text-to-speech rate (`Settings.Secure.TTS_DEFAULT_RATE`). TalkBack's
-    own speed slider may not be readable by apps; if it isn't, this goal can't be fully met on
-    Android. Not verified: no Android device available on 2026-10-10.
-- **How to check:** change the screen reader's speed, tap the button on the example's Accessible
-  screen, and confirm the sentence follows it.
+    uses the system text-to-speech rate (`Settings.Secure.TTS_DEFAULT_RATE`), which **TalkBack's own
+    speed slider writes** (checked 2026-10-19: moving it changed the setting 3.69× → 0.10× → 1.58×).
+    **Verified (2026-10-19)** ✅, Nothing Phone (1), Android 14 (phone in English), TalkBack on,
+    `example/lib/measure.dart`, times from the plugins' callbacks:
+
+    | | TalkBack 3.69× | TalkBack "normal" (1.58×) |
+    |---|---|---|
+    | accessible_flutter_tts, app rate 0.5 | 2.08 s · 2.07 s | 4.60 s · 4.61 s |
+    | accessible_flutter_tts, app rate 0.65 | 2.07 s · 2.10 s | 4.61 s · 4.64 s |
+    | flutter_tts, app rate 0.5 | 7.20 s · 7.23 s | 7.18 s · 7.22 s |
+    | flutter_tts, app rate 0.65 | 5.61 s · 5.60 s | 5.59 s · 5.63 s |
+
+    Our sentence follows TalkBack's speed and ignores the app's; flutter_tts does the opposite.
+- **How to check:** with the screen reader on, run `flutter run --release -t lib/measure.dart` at
+  two screen reader speeds (Android: read the `MEASURE|…` lines with `adb logcat -s flutter`;
+  iOS: read them on screen). Our lines change with the screen reader's speed, flutter_tts's don't.
 
 ### 6. Screen reader on: speech starts only after the screen reader stops 🟡
 

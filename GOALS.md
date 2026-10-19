@@ -29,8 +29,8 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
   `https://github.com/BLKKKBVSIK/flutter_tts.git`, branch `ezymob/screen-reader-aware`, builds for
   iOS (Swift Package Manager) and Android. With a local copy of the repo, it also built for iOS with
   CocoaPods, and with flutter_tts 4.2.5 installed next to it.
-- **Note:** the README's install snippet uses the tag `v4.2.5-ezymob.1`, which doesn't exist yet.
-  Until it's created, apps use `ref: ezymob/screen-reader-aware`.
+- **Release:** apps install the tag `v4.2.5-ezymob.2` (2026-10-19), which includes every fix
+  verified in this file.
 - **How to check:** a fresh `flutter create` app with the git dependency builds for Android and iOS.
 
 ### 3. It replaces flutter_tts with nothing else to change ✅

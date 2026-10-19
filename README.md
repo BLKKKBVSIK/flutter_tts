@@ -16,7 +16,7 @@ dependencies:
   accessible_flutter_tts:
     git:
       url: https://github.com/BLKKKBVSIK/flutter_tts.git
-      ref: v4.2.5-ezymob.1
+      ref: v4.2.5-ezymob.2
 ```
 
 and the import:

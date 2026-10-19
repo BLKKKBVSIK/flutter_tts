@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 4.2.5+ezymob.2
+
+### Fixes
+
+- **iOS:** with VoiceOver on, text in the phone's language now follows the user's VoiceOver
+  speed. Naming the language made VoiceOver use that language's own speed.
+- **Android:** a screen reader is detected by touch exploration. Select to Speak was mistaken for
+  a screen reader and changed the speed without TalkBack.
+
 ## 4.2.5+ezymob.1
 
 ### Features

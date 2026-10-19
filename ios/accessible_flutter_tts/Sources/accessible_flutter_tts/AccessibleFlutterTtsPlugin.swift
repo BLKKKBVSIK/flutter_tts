@@ -200,11 +200,18 @@ public class AccessibleFlutterTtsPlugin: NSObject, FlutterPlugin, AVSpeechSynthe
   }
 
   private func postAnnouncement(text: String) {
-    let attributes: [NSAttributedString.Key: Any] = [
-      .accessibilitySpeechQueueAnnouncement: true,
-      .accessibilitySpeechLanguage: self.voice?.language ?? self.language,
-    ]
+    var attributes: [NSAttributedString.Key: Any] = [.accessibilitySpeechQueueAnnouncement: true]
+    // Naming a language makes VoiceOver use that language's own voice and rate, not the rate the
+    // user is using: only name it when the text isn't in the phone's language.
+    let language = self.voice?.language ?? self.language
+    if baseLanguage(language) != baseLanguage(AVSpeechSynthesisVoice.currentLanguageCode()) {
+      attributes[.accessibilitySpeechLanguage] = language
+    }
     UIAccessibility.post(notification: .announcement, argument: NSAttributedString(string: text, attributes: attributes))
+  }
+
+  private func baseLanguage(_ code: String) -> String {
+    return code.split(separator: "-").first.map { $0.lowercased() } ?? code.lowercased()
   }
 
   private func announcementDidFinish(_ notification: Notification) {

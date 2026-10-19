@@ -1,14 +1,25 @@
 // Measures flutter_tts and accessible_flutter_tts with the same calls, for GOALS.md.
 // Run on a device: flutter run --release -t lib/measure.dart
-// Each result is printed as "MEASURE|plugin|rate|start ms|duration ms" and shown on screen.
+// Each result is printed as "MEASURE|plugin|rate|start ms|duration ms|speak result" and shown
+// on screen. The speak result is 1 when the sentence was read (with VoiceOver: when VoiceOver says so).
 import 'dart:async';
 
 import 'package:accessible_flutter_tts/flutter_tts.dart' as accessible;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart' as original;
 
-const _sentence = 'Prochain arrêt, Gare de Lyon. Correspondance avec la ligne 1 du métro '
-    'et le RER A. Préparez-vous à descendre.';
+// The sentence is in the phone's language (French or English): with VoiceOver, text in another
+// language is read with that language's voice and speed, not the speed the user set.
+bool get _phoneInFrench =>
+    WidgetsBinding.instance.platformDispatcher.locale.languageCode == 'fr';
+
+String get _language => _phoneInFrench ? 'fr-FR' : 'en-US';
+
+String get _sentence => _phoneInFrench
+    ? 'Prochain arrêt, Gare de Lyon. Correspondance avec la ligne 1 du métro '
+        'et le RER A. Préparez-vous à descendre.'
+    : 'Next stop, Gare de Lyon. Change here for metro line 1 and the RER A. '
+        'Please get ready to get off.';
 
 void main() => runApp(const MaterialApp(home: MeasurePage()));
 
@@ -39,14 +50,15 @@ class _MeasurePageState extends State<MeasurePage> {
     await Future<void>.delayed(const Duration(seconds: 2));
     final screenReader =
         WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.accessibleNavigation;
-    debugPrint('MEASURE|screen reader on|$screenReader');
-    setState(() => _results.add('screen reader on: $screenReader'));
+    debugPrint('MEASURE|screen reader on|$screenReader|language|$_language');
+    setState(() => _results.add('screen reader on: $screenReader, language: $_language'));
     // Default rate, then a faster one: both plugins must honour the app's rate the same way.
     for (final rate in [0.5, 0.65]) {
       for (var round = 0; round < 2; round++) {
         for (final entry in plugins.entries) {
           final result = await _measure(entry.value, rate);
-          final line = 'MEASURE|${entry.key}|$rate|${result.start}|${result.duration}';
+          final line =
+              'MEASURE|${entry.key}|$rate|${result.start}|${result.duration}|${result.spoken}';
           debugPrint(line);
           setState(() => _results.add(line));
           await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -57,7 +69,7 @@ class _MeasurePageState extends State<MeasurePage> {
     setState(() => _results.add('done'));
   }
 
-  Future<({int start, int duration})> _measure(_Plugin plugin, double rate) async {
+  Future<({int start, int duration, Object? spoken})> _measure(_Plugin plugin, double rate) async {
     await plugin.setSpeechRate(rate);
     final stopwatch = Stopwatch();
     final started = Completer<int>();
@@ -69,10 +81,10 @@ class _MeasurePageState extends State<MeasurePage> {
       if (!completed.isCompleted) completed.complete(stopwatch.elapsedMilliseconds);
     });
     stopwatch.start();
-    await plugin.speak(_sentence);
+    final spoken = await plugin.speak(_sentence);
     final start = await started.future.timeout(const Duration(seconds: 30), onTimeout: () => -1);
     final end = await completed.future.timeout(const Duration(seconds: 30), onTimeout: () => -1);
-    return (start: start, duration: end < 0 || start < 0 ? -1 : end - start);
+    return (start: start, duration: end < 0 || start < 0 ? -1 : end - start, spoken: spoken);
   }
 
   @override
@@ -88,7 +100,7 @@ class _MeasurePageState extends State<MeasurePage> {
 abstract class _Plugin {
   Future<void> configure();
   Future<void> setSpeechRate(double rate);
-  Future<void> speak(String text);
+  Future<Object?> speak(String text);
   void onStart(VoidCallback handler);
   void onComplete(VoidCallback handler);
 }
@@ -104,14 +116,14 @@ class _OriginalPlugin implements _Plugin {
       [original.IosTextToSpeechAudioCategoryOptions.duckOthers],
     );
     await _tts.awaitSpeakCompletion(true);
-    await _tts.setLanguage('fr-FR');
+    await _tts.setLanguage(_language);
   }
 
   @override
   Future<void> setSpeechRate(double rate) => _tts.setSpeechRate(rate);
 
   @override
-  Future<void> speak(String text) => _tts.speak(text);
+  Future<Object?> speak(String text) async => await _tts.speak(text);
 
   @override
   void onStart(VoidCallback handler) => _tts.setStartHandler(handler);
@@ -131,14 +143,14 @@ class _AccessiblePlugin implements _Plugin {
       [accessible.IosTextToSpeechAudioCategoryOptions.duckOthers],
     );
     await _tts.awaitSpeakCompletion(true);
-    await _tts.setLanguage('fr-FR');
+    await _tts.setLanguage(_language);
   }
 
   @override
   Future<void> setSpeechRate(double rate) => _tts.setSpeechRate(rate);
 
   @override
-  Future<void> speak(String text) => _tts.speak(text);
+  Future<Object?> speak(String text) async => await _tts.speak(text);
 
   @override
   void onStart(VoidCallback handler) => _tts.setStartHandler(handler);

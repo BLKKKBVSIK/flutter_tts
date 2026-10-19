@@ -88,7 +88,16 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 - **Status (2026-10-10):**
   - iOS: in the foreground, VoiceOver reads the text itself (queued announcement), so it uses its
     own voice and speed. In the background, `prefersAssistiveTechnologySettings` applies VoiceOver's
-    settings. Not verified on a device.
+    settings.
+    **Verified (2026-10-19)**, iPhone 17 Pro, iOS 27.2 (phone in English), `example/lib/measure.dart`,
+    screen recording analysed. With VoiceOver on at a fast speed: our sentence lasted 1.51 s at app
+    rates 0.5 and 0.65 alike, flutter_tts 5.96 s / 3.25 s (unchanged from VoiceOver off).
+    Still to do: one run with VoiceOver on at a slow speed, to show the length follows the slider.
+    **Fixed (2026-10-19):** naming the text's language made VoiceOver use that language's own voice
+    and speed (our sentence stayed at 6.56 s whatever the VoiceOver speed). The language is now only
+    named when it differs from the phone's.
+    **Known limit:** text in another language than the phone's is read at that language's VoiceOver
+    speed, not the user's current one. iOS offers no way around it.
   - Android: a screen reader is detected by touch exploration (TalkBack turns it on). Speech then
     uses the system text-to-speech rate (`Settings.Secure.TTS_DEFAULT_RATE`). TalkBack's
     own speed slider may not be readable by apps; if it isn't, this goal can't be fully met on

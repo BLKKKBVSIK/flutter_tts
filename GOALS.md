@@ -85,14 +85,21 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 
 - **Expected:** with VoiceOver or TalkBack on, the app's speech runs at the speed set for
   VoiceOver or TalkBack, whatever rate the app asked for.
-- **Status (2026-10-10):**
+- **Status (2026-10-19):** iOS done; Android to test.
   - iOS: in the foreground, VoiceOver reads the text itself (queued announcement), so it uses its
     own voice and speed. In the background, `prefersAssistiveTechnologySettings` applies VoiceOver's
     settings.
-    **Verified (2026-10-19)**, iPhone 17 Pro, iOS 27.2 (phone in English), `example/lib/measure.dart`,
-    screen recording analysed. With VoiceOver on at a fast speed: our sentence lasted 1.51 s at app
-    rates 0.5 and 0.65 alike, flutter_tts 5.96 s / 3.25 s (unchanged from VoiceOver off).
-    Still to do: one run with VoiceOver on at a slow speed, to show the length follows the slider.
+    **Verified (2026-10-19)** ✅, iPhone 17 Pro, iOS 27.2 (phone in English), VoiceOver on,
+    `example/lib/measure.dart`, screen recordings analysed. Times from the plugins' callbacks:
+
+    | | VoiceOver fast | VoiceOver slow |
+    |---|---|---|
+    | accessible_flutter_tts, app rate 0.5 | 1.69 s · 1.63 s | 10.20 s · 10.14 s |
+    | accessible_flutter_tts, app rate 0.65 | 1.63 s · 1.64 s | 10.14 s · 10.14 s |
+    | flutter_tts, app rate 0.5 | 7.20 s · 7.22 s | 7.25 s · 7.21 s |
+    | flutter_tts, app rate 0.65 | 4.39 s · 4.39 s | 4.40 s · 4.40 s |
+
+    Our sentence follows VoiceOver's speed and ignores the app's; flutter_tts does the opposite.
     **Fixed (2026-10-19):** naming the text's language made VoiceOver use that language's own voice
     and speed (our sentence stayed at 6.56 s whatever the VoiceOver speed). The language is now only
     named when it differs from the phone's.
@@ -109,7 +116,7 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 
 - **Expected:** the app's speech never overlaps the screen reader. If the screen reader is talking,
   the app waits for it to finish, then speaks.
-- **Status (2026-10-10):**
+- **Status (2026-10-19):** iOS done; Android to test.
   - iOS: the text is handed to VoiceOver as a queued announcement while the app is in the
     foreground. The 2026-10-06 test (VoiceOver cut on tap) couldn't show waiting: a double-tap
     stops VoiceOver by itself. The example now makes the screen reader read a long text, then

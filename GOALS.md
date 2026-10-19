@@ -116,7 +116,7 @@ Status: ✅ done and verified · 🟡 partly done or not verified · ❌ not don
 
 - **Expected:** the app's speech never overlaps the screen reader. If the screen reader is talking,
   the app waits for it to finish, then speaks.
-- **Status (2026-10-19):** iOS done; Android to test.
+- **Status (2026-10-10):**
   - iOS: the text is handed to VoiceOver as a queued announcement while the app is in the
     foreground. The 2026-10-06 test (VoiceOver cut on tap) couldn't show waiting: a double-tap
     stops VoiceOver by itself. The example now makes the screen reader read a long text, then
